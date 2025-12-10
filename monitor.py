@@ -10,12 +10,15 @@ import time
 from datetime import datetime
 
 LOG_FILENAME = "security_audit.log"
-_monitor_lock = threading.Lock() 
+WHITELIST_FILENAME = "monitor_whitelist.txt"
+
+_monitor_lock = threading.Lock()
 _config = {
     "enabled": False,
     "lang": "en"
 }
 HOOKS_INSTALLED = False
+WHITELIST_RULES = {} 
 
 _log_throttle = {} 
 THROTTLE_SECONDS = 3.0 
@@ -24,9 +27,8 @@ LOG_MESSAGES = {
     "en": {
         "log_fmt": "[Node: {node}] [Action: {action}] [Target: {target}] [File: {file}:{line}]",
         "term_title": "[Security Monitor]",
-        "monitor_on": "[Security] Real-time Monitor: ON (Smart Throttling Enabled)",
+        "monitor_on": "[Security] Real-time Monitor: ON (Whitelist loaded)",
         "monitor_off": "[Security] Real-time Monitor: OFF",
-        "throttled": "(Repeated alerts suppressed for {}s)",
         "actions": {
             "os_system": "System Command (os.system)",
             "os_popen": "System Command (os.popen)",
@@ -43,9 +45,8 @@ LOG_MESSAGES = {
     "zh": {
         "log_fmt": "[節點: {node}] [行為: {action}] [對象: {target}] [文件: {file}:{line}]",
         "term_title": "[安全監控]",
-        "monitor_on": "[Security] 即時監控已開啟 (已啟用智能降噪)",
+        "monitor_on": "[Security] 即時監控已開啟 (白名單已載入)",
         "monitor_off": "[Security] 即時監控已關閉",
-        "throttled": "(重複警報已抑制 {} 秒)",
         "actions": {
             "os_system": "執行系統指令 (os.system)",
             "os_popen": "執行系統指令 (os.popen)",
@@ -75,7 +76,6 @@ class Colors:
     YELLOW = '\033[93m'
     GREEN = '\033[92m'
     ENDC = '\033[0m'
-    GREY = '\033[90m'
 
 _orig = {
     "os_system": os.system,
@@ -111,11 +111,48 @@ try:
     _orig["aiohttp_request"] = aiohttp.ClientSession._request
 except ImportError: pass
 
+
+def load_whitelist_from_file():
+    """從 txt 文件讀取白名單配置"""
+    global WHITELIST_RULES
+    rules = {}
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, WHITELIST_FILENAME)
+    
+    if not os.path.exists(file_path):
+        return
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                
+                if ":" in line:
+                    parts = line.split(":", 1)
+                    node_name = parts[0].strip()
+                    actions_str = parts[1].strip()
+                    
+                    if not node_name or not actions_str:
+                        continue
+                        
+                    actions = [a.strip() for a in actions_str.split(",")]
+                    rules[node_name] = actions
+        
+        WHITELIST_RULES = rules
+    except Exception as e:
+        print(f"{Colors.RED}[Security] Failed to load whitelist: {e}{Colors.ENDC}")
+
 def set_config(enable: bool, lang: str = "en"):
     with _monitor_lock:
         _config["enabled"] = enable
         _config["lang"] = lang if lang in ["en", "zh"] else "en"
         
+        if enable:
+            load_whitelist_from_file()
+
         msgs = LOG_MESSAGES[_config["lang"]]
         status_msg = msgs["monitor_on"] if enable else msgs["monitor_off"]
         print(f"{Colors.YELLOW}{status_msg}{Colors.ENDC}")
@@ -143,8 +180,13 @@ def log_event(action_key, target_info):
 
     node_name, file_path, line_no = get_node_attribution()
     
+    if node_name in WHITELIST_RULES:
+        allowed_actions = WHITELIST_RULES[node_name]
+        if "*" in allowed_actions or action_key in allowed_actions:
+            return 
+
     current_time = time.time()
-    throttle_key = (node_name, action_key) 
+    throttle_key = (node_name, action_key)
     
     if throttle_key in _log_throttle:
         last_time = _log_throttle[throttle_key]
@@ -164,7 +206,7 @@ def log_event(action_key, target_info):
     title = msgs["term_title"]
     print(f"{Colors.RED}{title}{Colors.ENDC} {Colors.CYAN}{node_name}{Colors.ENDC} -> {Colors.YELLOW}{action_text}{Colors.ENDC}")
     print(f"  └── Info: {target_info}")
-    
+
 
 def hooked_os_system(command):
     log_event("os_system", f"Cmd: {command}")
@@ -213,6 +255,7 @@ async def hooked_aiohttp_request(self, method, str_or_url, *args, **kwargs):
         log_event("aiohttp", f"[{method}] {str_or_url}")
     return await _orig["aiohttp_request"](self, method, str_or_url, *args, **kwargs)
 
+
 def install_hooks():
     global HOOKS_INSTALLED
     if HOOKS_INSTALLED: return
@@ -242,6 +285,7 @@ def install_hooks():
         aiohttp.ClientSession._request = hooked_aiohttp_request
 
     HOOKS_INSTALLED = True
+    load_whitelist_from_file()
     print(f"{Colors.GREEN}[Security] Monitor hooks installed (Smart Throttling Enabled).{Colors.ENDC}")
 
 install_hooks()
