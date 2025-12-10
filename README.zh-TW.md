@@ -59,6 +59,16 @@ git clone https://github.com/YourUsername/ComfyUI-Security-Audit.git
    * `show_recent_logs`: 在節點輸出中顯示最近幾筆日誌。
    * `custom_path`: 指定要掃描的目標資料夾（預設為 `custom_nodes`）。
 
+3. **白名單配置**
+
+如果您發現某些受信任的節點頻繁觸發誤報（例如某些數學節點合法使用 `eval`），您可以將其加入白名單以屏蔽警報。
+
+1.  打開節點根目錄下的 `monitor_whitelist.txt` 文件。
+2.  按照格式 `節點資料夾名稱: 行為` 新增規則。
+    * **範例**: `ComfyUI_smZNodes: eval` (忽略該節點的 `eval` 警告)。
+    * **忽略所有**: `ComfyUI-Manager: *` (忽略該節點的所有行為)。
+3.  **熱重載**: 修改後無需重啟 ComfyUI，只需在介面上切換 **"realtime_monitor"** 開關（開啟 -> 關閉 -> 開啟）即可立即套用新規則。
+
 ### 可檢測的風險 (範例)
 
 * **嚴重 (Critical)**: 鍵盤監聽 (`pynput`)、遠端控制工具引用。

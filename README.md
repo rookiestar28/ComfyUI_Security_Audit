@@ -59,6 +59,16 @@ Restart ComfyUI to load the node.
    * `show_recent_logs`: Number of recent log entries to display in the node output.
    * `custom_path`: Target directory to scan (default is `custom_nodes`).
 
+3. **Whitelist Configuration**
+
+If you encounter frequent false positives from trusted nodes (e.g., a node using `eval` for math calculations), you can add them to the whitelist to suppress alerts.
+
+1.  Open the `monitor_whitelist.txt` file in the node's root directory.
+2.  Add rules in the format: `NodeFolderName: action`.
+    * **Example**: `ComfyUI_smZNodes: eval` (Ignores `eval` warnings for this node).
+    * **Ignore All**: `ComfyUI-Manager: *` (Ignores all actions for this node).
+3.  **Hot Reload**: Just toggle the **"realtime_monitor"** switch (Enable -> Disable -> Enable) in the UI to apply changes immediately without restarting ComfyUI.
+
 ### Detected Risks (Examples)
 
 * **Critical**: Keyloggers (`pynput`), Remote Access Tools.
