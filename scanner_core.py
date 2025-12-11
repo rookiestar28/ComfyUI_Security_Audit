@@ -24,7 +24,12 @@ AST_RISKS = {
     "shutil.rmtree": {"score": 3, "level": "WARNING", "desc": {"en": "Recursive Delete", "zh": "遞迴刪除目錄"}},
     "requests.post": {"score": 2, "level": "WARNING", "desc": {"en": "HTTP POST", "zh": "發送 POST 請求"}},
     "urllib.request.urlopen": {"score": 2, "level": "WARNING", "desc": {"en": "URL Open", "zh": "打開網絡連結"}},
-    "pynput": {"score": 10, "level": "CRITICAL", "desc": {"en": "Keylogger Lib (pynput)", "zh": "引用鍵盤監聽庫 (pynput)"}, "type": "import"}
+    "pynput": {"score": 10, "level": "CRITICAL", "desc": {"en": "Keylogger Lib (pynput)", "zh": "引用鍵盤監聽庫 (pynput)"}, "type": "import"},
+    "subprocess.run": {"score": 9, "level": "HIGH", "desc": {"en": "Subprocess Run", "zh": "執行子進程 (subprocess.run)"}},
+    "__import__": {"score": 9, "level": "CRITICAL", "desc": {"en": "Dynamic Import", "zh": "動態導入 (__import__)"}},
+    "getattr": {"score": 6, "level": "WARNING", "desc": {"en": "Dynamic Attribute Access", "zh": "動態屬性訪問 (getattr)"}},
+    "pickle.loads": {"score": 10, "level": "CRITICAL", "desc": {"en": "Unsafe Deserialization", "zh": "不安全反序列化 (pickle.loads)"}},
+    "ctypes": {"score": 9, "level": "CRITICAL", "desc": {"en": "Low-level C Bindings", "zh": "底層 C 語言調用 (ctypes)"}, "type": "import"}
 }
 
 UI_STRINGS = {

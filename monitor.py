@@ -151,6 +151,7 @@ def set_config(enable: bool, lang: str = "en"):
         _config["lang"] = lang if lang in ["en", "zh"] else "en"
         
         if enable:
+            install_hooks()
             load_whitelist_from_file()
 
         msgs = LOG_MESSAGES[_config["lang"]]
@@ -288,4 +289,4 @@ def install_hooks():
     load_whitelist_from_file()
     print(f"{Colors.GREEN}[Security] Monitor hooks installed (Smart Throttling Enabled).{Colors.ENDC}")
 
-install_hooks()
+# install_hooks()  <-- Removed auto-install

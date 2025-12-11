@@ -22,16 +22,19 @@ It acts as a "smoke detector" for your ComfyUI environment, identifying risky op
 
 1. **AST-Based Static Analysis**:
    * Uses Python's **Abstract Syntax Tree (AST)** engine instead of simple Regex.
-   * Accurately identifies dangerous function calls (e.g., `os.system`, `subprocess`) while ignoring comments and strings, significantly reducing false positives.
+   * Accurately identifies dangerous function calls (e.g., `os.system`, `subprocess`, `pickle`, `ctypes`) while ignoring comments and strings, significantly reducing false positives.
    * **Smart Caching**: Caches scan results based on file timestamps for instant subsequent scans.
 
-2. **Real-time Runtime Monitor**:
+2.  **Lazily Loaded Real-time Monitor**:
+    *   **Performance First**: Monitor hooks are *only* installed when you explicitly enable "Real-time Monitor". They are not active during normal node usage if the monitor is disabled.
+
+3. **Real-time Runtime Monitor**:
    * Uses **Monkey Patching** to hook into sensitive system APIs (`os`, `subprocess`, `shutil`).
    * **Async Network Support**: Monitors both synchronous (`requests`, `urllib`) and asynchronous (`aiohttp`) network traffic to detect hidden data exfiltration.
    * **Thread-Safe**: Designed with locking mechanisms to ensure stability in multi-threaded ComfyUI workflows.
    * **Tracing**: Identifies exactly *which* custom node initiated the risky action.
 
-3. **Integrated UI Report**:
+4. **Integrated UI Report**:
    * Displays scan results directly in the ComfyUI interface.
    * Supports **English** and **Traditional Chinese**.
 
@@ -57,11 +60,20 @@ Restart ComfyUI to load the node.
      * **DISABLE**: Monitor is off (default).
      * **ENABLE**: Activates the runtime hooks. High-risk actions and network requests will be logged to the console and `security_audit.log`.
    * `show_recent_logs`: Number of recent log entries to display in the node output.
+   * `whitelist_edit`: Directly edit whitelist rules in the UI node (overwrites `monitor_whitelist.txt`).
    * `custom_path`: Target directory to scan (default is `custom_nodes`).
 
 3. **Whitelist Configuration**
 
 If you encounter frequent false positives from trusted nodes (e.g., a node using `eval` for math calculations), you can add them to the whitelist to suppress alerts.
+
+**Option A: UI Editor**
+1. In the node settings, find the `whitelist_edit` text box.
+2. Paste or type your rules directly.
+3. Run the node to save and apply.
+   * *Note*: Leave empty to keep existing rules.
+
+**Option B: Manual File Edit**
 
 1.  Open the `monitor_whitelist.txt` file in the node's root directory.
 2.  Add rules in the format: `NodeFolderName: action`.
@@ -71,8 +83,8 @@ If you encounter frequent false positives from trusted nodes (e.g., a node using
 
 ### Detected Risks (Examples)
 
-* **Critical**: Keyloggers (`pynput`), Remote Access Tools.
-* **High**: System shell commands (`os.system`, `popen`), Dynamic execution (`eval`, `exec`), Base64 decoding (obfuscation).
+* **Critical**: Keyloggers (`pynput`), Remote Access Tools, Unsafe Deserialization (`pickle`), Hidden Imports (`__import__`), Low-level Access (`ctypes`).
+* **High**: System shell commands (`os.system`, `subprocess.run`), Dynamic execution (`eval`, `exec`), Base64 decoding (obfuscation).
 * **Warning**: File deletion (`rmtree`), Network uploads (`POST` requests), Socket connections.
 
 ### ⚠️ Disclaimer & Limitations (Important)
@@ -87,7 +99,15 @@ If you encounter frequent false positives from trusted nodes (e.g., a node using
 
 4.  **Runtime Monitor Risks**: The runtime monitor intercepts system calls. While designed to be safe, there is a theoretical risk that it could conflict with certain complex nodes or cause instability.
 
-5.  **No Liability**:
-    * This software is provided "AS IS", without warranty of any kind.
-    * The developer is **NOT liable** for any damages, data loss, hardware failure, or security breaches resulting from the use or misuse of this tool.
-    * For maximum security, always run ComfyUI in an isolated environment (Docker/VM).
+5.  **Disclaimer**:
+    * This project is licensed under the **MIT License**. In accordance with the license terms, the software is provided "AS IS", without warranty of any kind, express or implied.
+    * The developer is **NOT LIABLE** for any legal or compensatory damages arising from the use or misuse of this tool, including but not limited to:
+      - Direct or indirect losses
+      - Data loss or corruption
+      - Hardware damage
+      - Security breaches or privacy violations
+      - Business interruption or other commercial losses
+
+   **User Notice**
+    * It is strongly recommended to test thoroughly and backup important data before use.
+    * For the highest level of security, it is recommended to run ComfyUI in an isolated environment (Docker/VM).

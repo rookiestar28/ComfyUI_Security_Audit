@@ -39,6 +39,7 @@ class AuditScannerNode:
             },
             "optional": {
                 "custom_path": ("STRING", {"multiline": False, "default": "custom_nodes"}),
+                "whitelist_edit": ("STRING", {"multiline": True, "default": "", "placeholder": "Format: NodeName: action1, action2\n(Leave empty to keep existing)"}),
             }
         }
 
@@ -48,10 +49,21 @@ class AuditScannerNode:
     OUTPUT_NODE = True
     CATEGORY = "🛡️ Security"
 
-    def scan_nodes(self, scan_trigger, language, realtime_monitor, show_recent_logs, custom_path="custom_nodes"):
+    def scan_nodes(self, scan_trigger, language, realtime_monitor, show_recent_logs, custom_path="custom_nodes", whitelist_edit=""):
         lang_code = "zh" if language == "Traditional Chinese" else "en"
         t = UI_TEXT[lang_code]
         
+        # Handle Whitelist Update
+        if whitelist_edit.strip():
+            try:
+                whitelist_path = os.path.join(os.path.dirname(__file__), "monitor_whitelist.txt")
+                with open(whitelist_path, "w", encoding="utf-8") as f:
+                    f.write(whitelist_edit)
+                # Force reload rules
+                monitor.load_whitelist_from_file()
+            except Exception as e:
+                print(f"[Security Audit] Failed to save whitelist: {e}")
+
         monitor_active = (realtime_monitor == "ENABLE")
         monitor.set_config(monitor_active, lang_code)
         
@@ -59,6 +71,19 @@ class AuditScannerNode:
         
         status = t["status_active"] if monitor_active else t["status_inactive"]
         output_text.append(f"{t['monitor_title']}: {status}")
+        
+        # Display current whitelist
+        current_whitelist = ""
+        try:
+             whitelist_path = os.path.join(os.path.dirname(__file__), "monitor_whitelist.txt")
+             if os.path.exists(whitelist_path):
+                 with open(whitelist_path, "r", encoding="utf-8") as f:
+                     current_whitelist = f.read().strip()
+        except: pass
+        
+        if current_whitelist:
+            output_text.append(f"\n[Whitelist Rules Loaded]\n{current_whitelist}\n")
+
         output_text.append(f"{t['log_file']}: security_audit.log")
         output_text.append("=" * 50)
 
